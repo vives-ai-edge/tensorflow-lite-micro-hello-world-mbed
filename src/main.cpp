@@ -24,6 +24,8 @@ limitations under the License.
 #include "mbed.h"
 #include "stdlib.h"
 
+using namespace std::chrono;
+
 
 // This constant represents the range of x values our model was trained on,
 // which is from 0 to (2 * Pi). We approximate Pi to avoid requiring additional
@@ -38,7 +40,7 @@ const float kXrange = 2.f * 3.14159265359f;
 // inference, this value should be defined per-device.
 const int kInferencesPerCycle = 100;
 
-PwmOut led(LED1);
+// PwmOut led(LED1);
 
 // Globals, used for compatibility with Arduino-style sketches.
 namespace {
@@ -104,6 +106,10 @@ void setup() {
 
 // The name of this function is important for Arduino compatibility.
 void loop() {
+
+  Timer t;
+  t.start();
+
   // Calculate an x value to feed into the model. We compare the current
   // inference_count to the number of inferences per cycle to determine
   // our position within the range of possible x values the model was
@@ -125,7 +131,10 @@ void loop() {
 
   // Read the predicted y value from the model's output tensor
   float y_val = output->data.f[0];
-  led = abs(y_val);
+  t.stop();
+
+  printf("The time taken was %llu microseconds\n", duration_cast<microseconds>(t.elapsed_time()).count());
+  // led = abs(y_val);
 
   // Output the results.
   // Log the current X and Y values
@@ -137,6 +146,8 @@ void loop() {
   // the total number per cycle
   inference_count += 1;
   if (inference_count >= kInferencesPerCycle) inference_count = 0;
+
+  ThisThread::sleep_for(500ms);
 }
 
 
