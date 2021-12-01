@@ -72,12 +72,6 @@ float infeer(float x) {
   input->data.f[0] = x;
 
   // Run inference, and report any error
-  TfLiteStatus invoke_status = interpreter->Invoke();
-  if (invoke_status != kTfLiteOk) {
-    printf("Invoke failed on x_val: %f\n", x);
-    return -1.0;
-  }
-
   interpreter->Invoke();
 
   // Read the predicted y value from the model's output tensor
@@ -98,13 +92,6 @@ int main(void) {
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
   model = GetModel(g_model);
-  if (model->version() != TFLITE_SCHEMA_VERSION) {
-
-    printf("Model provided is schema version %d not equal "
-          "to supported version %d.",
-          (int) model->version(), (int) TFLITE_SCHEMA_VERSION);
-    return;
-  }
 
   // This pulls in all the operation implementations we need.
   // NOLINTNEXTLINE(runtime-global-variables)
@@ -116,11 +103,8 @@ int main(void) {
   interpreter = &static_interpreter;
 
   // Allocate memory from the tensor_arena for the model's tensors.
-  TfLiteStatus allocate_status = interpreter->AllocateTensors();
-  if (allocate_status != kTfLiteOk) {
-    printf("AllocateTensors() failed");
-    return;
-  }
+  interpreter->AllocateTensors();
+
 
   // Obtain pointers to the model's input and output tensors.
   input = interpreter->input(0);
