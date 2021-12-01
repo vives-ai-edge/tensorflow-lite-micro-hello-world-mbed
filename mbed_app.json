@@ -12,7 +12,13 @@
     ],
     "target_overrides": {
         "*": {
-            "platform.stdio-baud-rate": 115200
+            "platform.stdio-baud-rate": 115200,
+            "target.printf_lib": "std",
+            "platform.minimal-printf-enable-floating-point": false
+        },
+        "NUCLEO_L073RZ": {
+            "target.printf_lib": "minimal-printf",
+            "platform.minimal-printf-enable-floating-point": false
         }
     }
 }
