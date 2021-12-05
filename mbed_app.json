@@ -4,7 +4,7 @@
             "value": 65536
 	}
     },
-    "requires": ["bare-metal"]
+    "requires": ["bare-metal", "events"]
     ,"macros": [
         "NDEBUG",
         "TF_LITE_DISABLE_X86_NEON",

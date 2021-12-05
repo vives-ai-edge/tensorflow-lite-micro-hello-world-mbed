@@ -8,6 +8,7 @@
 
 using namespace tflite;
 
+EventQueue queue;
 
 // Application constants and variables
 const float Pi = 3.14159265359f;
@@ -32,6 +33,7 @@ uint8_t tensor_arena[TensorArenaSize];
 // Led to indicate the resulted values
 PwmOut led(LED1);
 
+
 void setLed(float value) {
   led = abs(value);
 }
@@ -53,8 +55,16 @@ float generateNextPosition() {
     return y_value;
 }
 
-int main(void) {
+void run_once() {
+    float x_value = generateNextPosition();
 
+    float y_value = inference(x_value);
+
+    setLed(y_value);
+    printValues(x_value, y_value);
+}
+
+int main(void) {
   static AllOpsResolver resolver;
   static MicroInterpreter static_interpreter(model, resolver, tensor_arena, TensorArenaSize, NULL);
   interpreter = &static_interpreter;
@@ -63,14 +73,8 @@ int main(void) {
   input = interpreter->input(0);
   output = interpreter->output(0);
 
-  while (true) {
-    float x_value = generateNextPosition();
-
-    float y_value = inference(x_value);
-
-    setLed(y_value);
-    printValues(x_value, y_value);
-  }
+  queue.call_every(10ms, run_once);
+  queue.dispatch_forever();
 }
 
 
