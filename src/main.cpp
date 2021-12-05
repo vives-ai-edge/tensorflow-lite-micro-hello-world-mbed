@@ -2,7 +2,6 @@
 
 #include "tensorflow/lite/micro/all_ops_resolver.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
-#include "tensorflow/lite/schema/schema_generated.h"
 
 #include "model.h"
 
@@ -42,21 +41,21 @@ void printValues(float x, float y) {
   printf("x_value: % 2.3f, y_value: % 02.3f\n", x, y);
 }
 
+float generateNextXValue() {
+    float position = (float) inference_count / InferencesPerCycle;
+    float x_value =  position * xrange;
+    inference_count = (inference_count + 1) % InferencesPerCycle;
+    return x_value;
+}
+
 float inference(float x) {
   input->data.f[0] = x;
   interpreter->Invoke();
   return output->data.f[0];
 }
 
-float generateNextPosition() {
-    float position = (float) inference_count / InferencesPerCycle;
-    float y_value =  position * xrange;
-    inference_count = (inference_count + 1) % InferencesPerCycle;
-    return y_value;
-}
-
 void run_once() {
-    float x_value = generateNextPosition();
+    float x_value = generateNextXValue();
 
     float y_value = inference(x_value);
 
