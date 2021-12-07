@@ -4,7 +4,7 @@
             "value": 65536
         }
     },
-    "requires": ["bare-metal", "events"]
+    "requires": ["bare-metal", "events", "drivers-usb"]
     ,"macros": [
         "NDEBUG",
         "TF_LITE_DISABLE_X86_NEON",
@@ -14,7 +14,10 @@
         "*": {
             "platform.stdio-baud-rate": 115200,
             "target.printf_lib": "std",
-            "platform.minimal-printf-enable-floating-point": false
+            "platform.minimal-printf-enable-floating-point": false,
+            "target.device_has_add": [
+                "USBDEVICE"
+            ]
         },
         "NUCLEO_L073RZ": {
             "target.printf_lib": "minimal-printf",

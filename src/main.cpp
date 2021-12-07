@@ -9,6 +9,19 @@ using namespace tflite;
 
 EventQueue queue;
 
+//*** Comment next line out if target IS a sensortile ***//
+// #define TARGET_SENSORTILE
+
+#ifdef TARGET_SENSORTILE
+  #include "USBSerial.h"
+
+  USBSerial serial(false);
+
+  FileHandle *mbed::mbed_override_console(int) {
+    return &serial;
+  }
+#endif
+
 // Application constants and variables
 const float Pi = 3.14159265359f;
 const float xrange = 2.f * Pi;
@@ -30,11 +43,13 @@ const int TensorArenaSize = ModelArenaSize + ExtraArenaSize;
 uint8_t tensor_arena[TensorArenaSize];
 
 // Led to indicate the resulted values
-PwmOut led(LED1);
+PwmOut nucleo_led(LED1);
+DigitalOut sensortile_led((PinName)0x6C);
 
 
 void setLed(float value) {
-  led = abs(value);
+  nucleo_led = abs(value);
+  sensortile_led = value < 0.0f ? 0 : 1;
 }
 
 void printValues(float x, float y) {

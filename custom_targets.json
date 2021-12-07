@@ -1,0 +1,8 @@
+{
+    "SENSORTILE": {
+        "inherits": ["NUCLEO_L476RG"],
+        "device_has_add": [
+            "USBDEVICE"
+        ]
+    }
+}
