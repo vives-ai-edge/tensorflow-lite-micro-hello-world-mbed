@@ -48,7 +48,7 @@ DigitalOut sensortile_led((PinName)0x6C);
 
 
 void setLed(float value) {
-  nucleo_led = abs(value);
+  nucleo_led = (value + 1) / 2;
   sensortile_led = value < 0.0f ? 0 : 1;
 }
 
