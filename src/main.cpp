@@ -10,7 +10,7 @@ using namespace tflite;
 EventQueue queue;
 
 //*** Comment next line out if target IS a sensortile ***//
-// #define TARGET_SENSORTILE
+#define TARGET_SENSORTILE
 
 #ifdef TARGET_SENSORTILE
   #include "USBSerial.h"
