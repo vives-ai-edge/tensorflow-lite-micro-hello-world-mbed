@@ -64,9 +64,16 @@ float generateNextXValue() {
 }
 
 float inference(float x) {
-  input->data.f[0] = x;
+
+  float input_scale = input->params.scale;
+  int input_zero_point = input->params.zero_point;
+
+  float output_scale = output->params.scale;
+  int output_zero_point = output->params.zero_point;
+
+  input->data.int8[0] = x / input_scale + input_zero_point;
   interpreter->Invoke();
-  return output->data.f[0];
+  return (output->data.int8[0] - output_zero_point) * output_scale;
 }
 
 void run_once() {
