@@ -8,7 +8,8 @@
     ,"macros": [
         "NDEBUG",
         "TF_LITE_DISABLE_X86_NEON",
-        "TF_LITE_STATIC_MEMORY"
+        "TF_LITE_STATIC_MEMORY",
+        "CMSIS_NN"
     ],
     "target_overrides": {
         "*": {

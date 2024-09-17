@@ -1,7 +1,8 @@
 #include "mbed.h"
 
-#include "tensorflow/lite/micro/all_ops_resolver.h"
+#include "tensorflow/lite/core/c/common.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 
 #include "model.h"
 
@@ -10,7 +11,7 @@ using namespace tflite;
 EventQueue queue;
 
 //*** Comment next line out if target IS a sensortile ***//
-#define TARGET_SENSORTILE
+// #define TARGET_SENSORTILE
 
 #ifdef TARGET_SENSORTILE
   #include "USBSerial.h"
@@ -31,11 +32,6 @@ int inference_count = 0;
 // Structure that contains the generated tensorflow model
 const Model* model = GetModel(g_model);
 
-// Interpreter, input and output structures
-MicroInterpreter* interpreter = nullptr;
-TfLiteTensor* input = nullptr;
-TfLiteTensor* output = nullptr;
-
 // Allocate memory for the tensors
 const int ModelArenaSize = 2468;
 const int ExtraArenaSize = 560 + 16 + 100;
@@ -46,6 +42,11 @@ uint8_t tensor_arena[TensorArenaSize];
 PwmOut nucleo_led(LED1);
 DigitalOut sensortile_led((PinName)0x6C);
 
+struct Context {
+  TfLiteTensor* input;
+  MicroInterpreter* interpreter;
+  TfLiteTensor* output;
+};
 
 void setLed(float value) {
   nucleo_led = (value + 1) / 2;
@@ -63,38 +64,40 @@ float generateNextXValue() {
     return x_value;
 }
 
-float inference(float x) {
+float inference(float x, Context& context) {
+  float input_scale = context.input->params.scale;
+  int input_zero_point = context.input->params.zero_point;
 
-  float input_scale = input->params.scale;
-  int input_zero_point = input->params.zero_point;
+  float output_scale = context.output->params.scale;
+  int output_zero_point = context.output->params.zero_point;
 
-  float output_scale = output->params.scale;
-  int output_zero_point = output->params.zero_point;
-
-  input->data.int8[0] = x / input_scale + input_zero_point;
-  interpreter->Invoke();
-  return (output->data.int8[0] - output_zero_point) * output_scale;
+  context.input->data.int8[0] = x / input_scale + input_zero_point;
+  context.interpreter->Invoke();
+  return (context.output->data.int8[0] - output_zero_point) * output_scale;
 }
 
-void run_once() {
+void run_once(Context& context) {
     float x_value = generateNextXValue();
 
-    float y_value = inference(x_value);
+    float y_value = inference(x_value, context);
 
     setLed(y_value);
     printValues(x_value, y_value);
 }
 
 int main(void) {
-  static AllOpsResolver resolver;
-  static MicroInterpreter static_interpreter(model, resolver, tensor_arena, TensorArenaSize, NULL);
-  interpreter = &static_interpreter;
-  interpreter->AllocateTensors();
+  MicroMutableOpResolver<1> resolver;
+  resolver.AddFullyConnected();
 
-  input = interpreter->input(0);
-  output = interpreter->output(0);
+  MicroInterpreter interpreter(model, resolver, tensor_arena, TensorArenaSize, NULL);
+  interpreter.AllocateTensors();
 
-  queue.call_every(10ms, run_once);
+  TfLiteTensor* input = interpreter.input(0);
+  TfLiteTensor* output = interpreter.output(0);
+
+  Context context = {input, &interpreter, output};
+
+  queue.call_every(10ms, run_once, context);
   queue.dispatch_forever();
 }
 
