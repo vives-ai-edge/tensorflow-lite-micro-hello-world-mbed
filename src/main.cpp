@@ -3,25 +3,16 @@
 #include "tensorflow/lite/core/c/common.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
+#include "tensorflow/lite/micro/micro_profiler.h"
+#include "tensorflow/lite/micro/recording_micro_interpreter.h"
+#include "tensorflow/lite/micro/micro_log.h"
 
 #include "model.h"
 
 using namespace tflite;
+using namespace std::chrono;
 
 EventQueue queue;
-
-//*** Comment next line out if target IS a sensortile ***//
-// #define TARGET_SENSORTILE
-
-#ifdef TARGET_SENSORTILE
-  #include "USBSerial.h"
-
-  USBSerial serial(false);
-
-  FileHandle *mbed::mbed_override_console(int) {
-    return &serial;
-  }
-#endif
 
 // Application constants and variables
 const float Pi = 3.14159265359f;
@@ -33,7 +24,7 @@ int inference_count = 0;
 const Model* model = GetModel(g_model);
 
 // Allocate memory for the tensors
-const int ModelArenaSize = 2468;
+const int ModelArenaSize = 4468;
 const int ExtraArenaSize = 560 + 16 + 100;
 const int TensorArenaSize = ModelArenaSize + ExtraArenaSize;
 uint8_t tensor_arena[TensorArenaSize];
@@ -44,7 +35,7 @@ DigitalOut sensortile_led((PinName)0x6C);
 
 struct Context {
   TfLiteTensor* input;
-  MicroInterpreter* interpreter;
+  RecordingMicroInterpreter* interpreter;
   TfLiteTensor* output;
 };
 
@@ -79,25 +70,46 @@ float inference(float x, Context& context) {
 void run_once(Context& context) {
     float x_value = generateNextXValue();
 
+    Timer t;
+
+    printf("[INFERENCE] Start\n");
+    t.start();
+
     float y_value = inference(x_value, context);
+
+    t.stop();
+    printf("[INFERENCE] End\n");
+    printf("The time taken was %llu microseconds\n", duration_cast<microseconds>(t.elapsed_time()).count());
 
     setLed(y_value);
     printValues(x_value, y_value);
 }
 
 int main(void) {
+  printf("Starting TensorFlow Lite Micro model...\n");
+
   MicroMutableOpResolver<1> resolver;
   resolver.AddFullyConnected();
 
-  MicroInterpreter interpreter(model, resolver, tensor_arena, TensorArenaSize, NULL);
+  // constexpr int kNumResourceVariables = 24;
+  // RecordingMicroAllocator* allocator(RecordingMicroAllocator::Create(tensor_arena, TensorArenaSize));
+  // MicroResourceVariables* resource_variables = MicroResourceVariables::Create(allocator, kNumResourceVariables);
+
+  MicroProfiler profiler;
+  RecordingMicroInterpreter interpreter(model, resolver, tensor_arena, TensorArenaSize, nullptr, nullptr);
   interpreter.AllocateTensors();
+
+  // profiler.LogTicksPerTagCsv();
+
+  interpreter.GetMicroAllocator().PrintAllocations();
 
   TfLiteTensor* input = interpreter.input(0);
   TfLiteTensor* output = interpreter.output(0);
 
   Context context = {input, &interpreter, output};
 
-  queue.call_every(10ms, run_once, context);
+  // queue.call_every(10ms, run_once, context);
+  queue.call(run_once, context);
   queue.dispatch_forever();
 }
 
